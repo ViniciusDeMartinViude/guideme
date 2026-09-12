@@ -3,6 +3,7 @@ import { Bot, Context, GrammyError } from "grammy";
 import { config } from "./config";
 import * as db from "./db";
 import { ask, formatIdeas } from "./agent";
+import { QuotaExhaustedError } from "./providers/gemini";
 import { markdownToTelegramHtml, splitMessage } from "./telegramFormat";
 
 export const bot = new Bot(config.telegramToken);
@@ -64,7 +65,9 @@ async function handleQuestion(ctx: Context, question: string): Promise<void> {
       await sendLong(ctx, answer);
     } catch (err) {
       console.error("ask failed", err);
-      if (err instanceof Anthropic.APIError && err.status === 402) {
+      if (err instanceof QuotaExhaustedError) {
+        await ctx.reply("Daily Gemini free-tier quota reached — I'll be back tomorrow (or enable billing on the Google project).");
+      } else if (err instanceof Anthropic.APIError && err.status === 402) {
         await ctx.reply("Out of OpenRouter credits — top up at openrouter.ai/settings/credits and ask again.");
       } else if (err instanceof Anthropic.RateLimitError) {
         await ctx.reply("The model is rate-limited right now — try again in a minute.");

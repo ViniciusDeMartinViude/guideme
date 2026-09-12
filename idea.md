@@ -41,8 +41,8 @@ Agent turn (lib/agent.ts)
   │  system prompt + today's date + group profile + saved ideas
   │  + last 30 stored turns + the new message ("Mik: …")
   ▼
-Claude Opus 5 via OpenRouter (Anthropic-compatible endpoint, official SDK)
-  │  loops: model → tool_use → run tool → tool_result → model …
+Model (Gemini Flash by default; Claude Opus 5 via OpenRouter with BOT_PROVIDER=openrouter)
+  │  loops: model → function call → run tool → result → model …
   │
   ├─ web_search      → Exa /search (titles, URLs, dates, excerpts)
   ├─ get_forecast    → Open-Meteo 16-day forecast
@@ -66,8 +66,7 @@ Each answer typically costs one to four model calls (one per round of tool use).
 | App | Next.js 16 (App Router) | Webhook as a route handler + a dashboard in one codebase |
 | Runtime | Node 24 + TypeScript | Built-in `node:sqlite` avoids native modules |
 | Telegram | grammY | Small, typed, supports polling and webhooks with the same bot object |
-| Model | Claude Opus 5, adaptive thinking, effort `medium` | Good judgement on trade-offs; medium effort keeps chat replies fast and cheap |
-| Provider | OpenRouter | Key we already had; its Anthropic-compatible endpoint lets us keep the official SDK |
+| Model | Gemini 3.x Flash (default) — or Claude Opus 5 via OpenRouter | Same tools either way; provider is one env var. Gemini free tier is 20 req/day/model, so billing is needed for daily use |
 | Search | Exa | Semantic search with page excerpts — good for "price of X in month Y" queries |
 | Weather | Open-Meteo | Free, no key; has both forecast and historical archive |
 | Memory | SQLite (`data/bot.sqlite`) | One file, survives restarts, nothing to host |

@@ -6,11 +6,17 @@ function required(name: string): string {
   return v;
 }
 
+const provider = (process.env.BOT_PROVIDER?.trim() || "gemini") as "gemini" | "openrouter";
+
+const defaultModel = { gemini: "gemini-3.8-flash", openrouter: "anthropic/claude-opus-5" }[provider];
+
 export const config = {
   telegramToken: required("TELEGRAM_BOT_TOKEN"),
-  openRouterKey: required("OPENROUTER_API_KEY"),
+  provider,
+  geminiKey: process.env.GEMINI_API_KEY?.trim() || "",
+  openRouterKey: process.env.OPENROUTER_API_KEY?.trim() || "",
   exaKey: required("EXA_API_KEY"),
-  model: process.env.BOT_MODEL?.trim() || "anthropic/claude-opus-5",
+  model: process.env.BOT_MODEL?.trim() || defaultModel,
   effort: (process.env.BOT_EFFORT?.trim() || "medium") as
     | "low"
     | "medium"

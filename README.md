@@ -2,15 +2,17 @@
 
 Telegram group bot that advises on holiday plans: destinations, prices, weather for the dates,
 things to do. Next.js app: the Telegram webhook is a route handler and a small dashboard shows
-each chat's profile, shortlist and history. Claude Opus 5 via OpenRouter, web search via Exa,
-weather via Open-Meteo (free), SQLite memory.
+each chat's profile, shortlist and history. Gemini (default) or Claude via OpenRouter, web
+search via Exa, weather via Open-Meteo (free), SQLite memory.
 
 ## Setup
 
 1. `npm install` (Node 24+ — uses the built-in `node:sqlite`).
 2. Copy `.env.example` to `.env` and fill in:
    - `TELEGRAM_BOT_TOKEN` — from @BotFather (`/newbot`).
-   - `OPENROUTER_API_KEY` — needs credits: https://openrouter.ai/settings/credits
+   - `GEMINI_API_KEY` — https://aistudio.google.com (default provider). Free tier is **20 requests
+     per day per model**; a question uses 2–5 requests, so enable billing for real use.
+   - `OPENROUTER_API_KEY` — only if `BOT_PROVIDER=openrouter`; needs credits.
    - `EXA_API_KEY` — https://dashboard.exa.ai
    - `ALLOWED_CHAT_IDS` (optional) — comma-separated chat ids; empty = any chat the bot is in.
 3. Add the bot to the group. Default privacy mode is fine: it only sees messages that mention it,
@@ -51,7 +53,9 @@ Answers follow the language the group writes in (PT/EN).
 - `app/api/telegram/route.ts` — webhook: verifies the secret, acks, runs the update in `after()`.
 - `app/page.tsx`, `app/chats/[id]/page.tsx` — dashboard (server components, read SQLite directly).
 - `proxy.ts` — basic auth for the dashboard.
-- `lib/agent.ts` — system prompt, tool definitions, Claude tool loop.
+- `lib/agent.ts` — one turn: load history, call the provider, persist. `lib/prompt.ts` — system prompt.
+- `lib/tools.ts` — provider-neutral tool specs (JSON Schema) + `runTool`.
+- `lib/providers/gemini.ts`, `lib/providers/anthropic.ts` — the model loops (function calling until a final answer).
 - `lib/bot.ts` — grammY handlers, mention detection, Telegram HTML formatting.
 - `lib/search.ts` — Exa `/search`. `lib/weather.ts` — Open-Meteo forecast + typical-month climate.
 - `lib/db.ts` — SQLite: chats/preferences, messages, ideas.
@@ -62,5 +66,5 @@ Railway volume) — not a serverless platform.
 
 ## Cost
 
-Each question is a few model calls (one per tool round). With `BOT_EFFORT=medium` and ~30 turns
-of history replayed, expect roughly $0.03–0.15 per question depending on how much searching it does.
+Each question is a few model calls (one per tool round). Gemini Flash: fractions of a cent per
+question on a billed project. Claude Opus 5 via OpenRouter: roughly $0.03–0.15 per question.
