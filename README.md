@@ -12,7 +12,8 @@ search via Exa, weather via Open-Meteo (free), SQLite memory.
    - `TELEGRAM_BOT_TOKEN` — from @BotFather (`/newbot`).
    - `GEMINI_API_KEY` — https://aistudio.google.com (default provider). Free tier is **20 requests
      per day per model**; a question uses 2–5 requests, so enable billing for real use.
-   - `OPENROUTER_API_KEY` — only if `BOT_PROVIDER=openrouter`; needs credits.
+   - `OPENAI_API_KEY` — if `BOT_PROVIDER=openai` (default model `gpt-5-mini`).
+   - `OPENROUTER_API_KEY` — if `BOT_PROVIDER=openrouter`; needs credits.
    - `EXA_API_KEY` — https://dashboard.exa.ai
    - `ALLOWED_CHAT_IDS` (optional) — comma-separated chat ids; empty = any chat the bot is in.
 3. Add the bot to the group. Default privacy mode is fine: it only sees messages that mention it,
@@ -54,7 +55,7 @@ Answers follow the language the group writes in (PT/EN).
 - `proxy.ts` — basic auth for the dashboard.
 - `lib/agent.ts` — one turn: load history, call the provider, persist. `lib/prompt.ts` — system prompt.
 - `lib/tools.ts` — provider-neutral tool specs (JSON Schema) + `runTool`.
-- `lib/providers/gemini.ts`, `lib/providers/anthropic.ts` — the model loops (function calling until a final answer).
+- `lib/providers/gemini.ts`, `openai.ts`, `anthropic.ts` — the model loops (function calling until a final answer).
 - `lib/bot.ts` — grammY handlers, mention detection, Telegram HTML formatting.
 - `lib/search.ts` — Exa `/search`. `lib/weather.ts` — Open-Meteo forecast + typical-month climate.
 - `lib/db.ts` — SQLite: chats/preferences, messages, ideas.

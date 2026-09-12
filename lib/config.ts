@@ -6,12 +6,13 @@ function required(name: string): string {
   return v;
 }
 
-const provider = (process.env.BOT_PROVIDER?.trim() || "gemini") as "gemini" | "openrouter";
+const provider = (process.env.BOT_PROVIDER?.trim() || "gemini") as "gemini" | "openrouter" | "openai";
 
 // Gemini: comma-separated fallback list (free tier is 20 requests/day per model).
 const defaultModel = {
   gemini: "gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash-preview",
   openrouter: "anthropic/claude-opus-5",
+  openai: "gpt-5-mini",
 }[provider];
 
 export const config = {
@@ -19,6 +20,7 @@ export const config = {
   provider,
   geminiKey: process.env.GEMINI_API_KEY?.trim() || "",
   openRouterKey: process.env.OPENROUTER_API_KEY?.trim() || "",
+  openAiKey: process.env.OPENAI_API_KEY?.trim() || "",
   exaKey: required("EXA_API_KEY"),
   model: process.env.BOT_MODEL?.trim() || defaultModel,
   effort: (process.env.BOT_EFFORT?.trim() || "medium") as
