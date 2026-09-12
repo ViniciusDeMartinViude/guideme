@@ -66,7 +66,7 @@ async function handleQuestion(ctx: Context, question: string): Promise<void> {
     } catch (err) {
       console.error("ask failed", err);
       if (err instanceof QuotaExhaustedError) {
-        await ctx.reply("Daily Gemini free-tier quota reached — I'll be back tomorrow (or enable billing on the Google project).");
+        await ctx.reply("Gemini free-tier quota is used up for today — back tomorrow, or enable billing on the Google project.");
       } else if (err instanceof Anthropic.APIError && err.status === 402) {
         await ctx.reply("Out of OpenRouter credits — top up at openrouter.ai/settings/credits and ask again.");
       } else if (err instanceof Anthropic.RateLimitError) {

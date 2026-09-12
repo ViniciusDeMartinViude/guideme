@@ -34,23 +34,51 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export class QuotaExhaustedError extends Error {}
 
-/** Free-tier Gemini returns 429/503 fairly often; retry a few times with backoff. */
-async function withRetry<T>(fn: () => Promise<T>, attempts = 4): Promise<T> {
+// BOT_MODEL may be a comma-separated list. The free tier caps each model at 20 requests/day,
+// so falling through to the next model when one is exhausted stretches the allowance.
+const models = config.model.split(",").map((m) => m.trim()).filter(Boolean);
+const exhaustedUntil = new Map<string, number>();
+
+function isRetryable(err: unknown): err is ApiError {
+  return err instanceof ApiError && (err.status === 429 || err.status === 503);
+}
+
+/** Retry 429/503 with backoff on one model; throw QuotaExhaustedError when its day is used up. */
+async function withRetry<T>(model: string, fn: () => Promise<T>, attempts = 3): Promise<T> {
   for (let i = 0; ; i++) {
     try {
       return await fn();
     } catch (err) {
-      // A per-day quota will not clear by waiting; surface it instead of burning retries.
-      if (err instanceof ApiError && err.status === 429 && /PerDay/.test(err.message)) {
-        throw new QuotaExhaustedError(`Gemini daily free-tier quota reached for ${config.model}`);
+      if (!isRetryable(err)) throw err;
+      // A per-day quota will not clear by waiting; mark the model out until tomorrow.
+      if (err.status === 429 && /PerDay/.test(err.message)) {
+        exhaustedUntil.set(model, Date.now() + 24 * 3600_000);
+        throw new QuotaExhaustedError(`daily quota reached for ${model}`);
       }
-      const retryable = err instanceof ApiError && (err.status === 429 || err.status === 503);
-      if (!retryable || i >= attempts - 1) throw err;
+      if (i >= attempts - 1) throw err;
       const delay = 2000 * 2 ** i;
-      console.warn(`gemini ${err.status}, retrying in ${delay}ms`);
+      console.warn(`gemini ${model} ${err.status}, retrying in ${delay}ms`);
       await sleep(delay);
     }
   }
+}
+
+/** Try each configured model in order, skipping ones known to be exhausted today. */
+async function withFallback<T>(fn: (model: string) => Promise<T>): Promise<T> {
+  let lastErr: unknown;
+  for (const model of models) {
+    if ((exhaustedUntil.get(model) ?? 0) > Date.now()) continue;
+    try {
+      return await withRetry(model, () => fn(model));
+    } catch (err) {
+      if (!(err instanceof QuotaExhaustedError) && !isRetryable(err)) throw err;
+      console.warn(`gemini ${model} unavailable (${err instanceof Error ? err.message.slice(0, 80) : err}), trying next`);
+      lastErr = err;
+    }
+  }
+  throw lastErr instanceof QuotaExhaustedError
+    ? lastErr
+    : new QuotaExhaustedError("all configured Gemini models are rate-limited");
 }
 
 export async function askGemini(chatId: number, history: Turn[], userText: string): Promise<string> {
@@ -63,9 +91,9 @@ export async function askGemini(chatId: number, history: Turn[], userText: strin
   ];
 
   for (let i = 0; i < 12; i++) {
-    const response = await withRetry(() =>
+    const response = await withFallback((model) =>
       getClient().models.generateContent({
-        model: config.model,
+        model,
         contents,
         config: {
           systemInstruction: `${SYSTEM}\n\n${buildContext(chatId)}`,

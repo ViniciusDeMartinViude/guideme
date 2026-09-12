@@ -8,7 +8,11 @@ function required(name: string): string {
 
 const provider = (process.env.BOT_PROVIDER?.trim() || "gemini") as "gemini" | "openrouter";
 
-const defaultModel = { gemini: "gemini-3.8-flash", openrouter: "anthropic/claude-opus-5" }[provider];
+// Gemini: comma-separated fallback list (free tier is 20 requests/day per model).
+const defaultModel = {
+  gemini: "gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash-preview",
+  openrouter: "anthropic/claude-opus-5",
+}[provider];
 
 export const config = {
   telegramToken: required("TELEGRAM_BOT_TOKEN"),
