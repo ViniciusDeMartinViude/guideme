@@ -10,10 +10,11 @@ decided, and turns it into a recommendation.
 
 ## The bot
 
-**@vamatripbot** sits in the group and acts as that person. Mention it or reply to it and it:
+**@vamatripbot** sits in the group and acts as that person. It follows the whole conversation
+and, whenever a message is about the trip (or asks it something), it:
 
-1. reads the question in the context of the last ~30 messages exchanged with it and the group's
-   stored profile (home airport, budget, who travels, constraints);
+1. reads the message in the context of the last ~20 group messages — everyone's, not only the
+   ones aimed at it — and the group's stored profile (home airport, budget, who travels, constraints);
 2. decides what it needs — searches the web for current prices/events/visa rules, pulls the
    forecast or the typical weather for the month in question;
 3. answers in the group's language with a concrete, sourced recommendation, short enough for a
@@ -21,8 +22,8 @@ decided, and turns it into a recommendation.
 4. keeps a shared shortlist of ideas (`/ideas`) that it updates as the group shortlists, rejects,
    or books things, and updates the profile (`/prefs`) whenever it learns a lasting fact.
 
-It only speaks when addressed, so it doesn't pollute the chat, and Telegram's default privacy
-mode means it never sees messages that aren't for it.
+Greetings and side chatter between people get no reply (the model answers `[silent]` and the bot
+posts nothing). For this to work the bot must be a group admin or have Telegram privacy mode off.
 
 ## How a question flows
 
@@ -34,8 +35,7 @@ Next.js route  POST /api/telegram  (or `npm run poll` without a public URL)
   │  checks the webhook secret, replies 200 at once, continues in after()
   ▼
 grammY handler (lib/bot.ts)
-  │  checks mention / reply-to-bot / command
-  │  queues per chat, shows "typing…"
+  │  stores every text message; queues per chat, shows "typing…"
   ▼
 Agent turn (lib/agent.ts)
   │  system prompt + today's date + group profile + saved ideas
@@ -89,8 +89,9 @@ No public URL handy? `npm run poll` runs the same bot with long polling instead.
 
 | Command | Effect |
 |---|---|
-| `@vamatripbot …` / reply to it | ask anything |
-| `/plan <question>` | ask without mentioning |
+| any message | stored as context; answered when it's about the trip |
+| `/plan <question>` | ask directly |
+| `/status` | can the bot see the whole conversation here? |
 | `/ideas` | show the shortlist |
 | `/prefs [text]` | show or replace the group profile |
 | `/forget` | clear conversation memory (keeps ideas + profile) |

@@ -16,8 +16,10 @@ search via Exa, weather via Open-Meteo (free), SQLite memory.
    - `OPENROUTER_API_KEY` — if `BOT_PROVIDER=openrouter`; needs credits.
    - `EXA_API_KEY` — https://dashboard.exa.ai
    - `ALLOWED_CHAT_IDS` (optional) — comma-separated chat ids; empty = any chat the bot is in.
-3. Add the bot to the group. Default privacy mode is fine: it only sees messages that mention it,
-   reply to it, or are commands.
+3. Add the bot to the group **as an admin** (or disable privacy mode in @BotFather with
+   `/setprivacy`, then remove and re-add it). Otherwise Telegram only delivers commands and replies
+   to the bot, and it cannot follow the conversation. `/status` in the group tells you which case
+   you are in.
 4. Run it:
 
    **On your own machine — long polling (default, no public URL needed)**
@@ -39,9 +41,11 @@ search via Exa, weather via Open-Meteo (free), SQLite memory.
 
 ## Using it
 
-- `@botname where could 4 of us go for a week in November under €800 each?`
-- Reply to one of its messages to continue the thread.
-- `/plan <question>` — same thing without the mention.
+- Just talk in the group. The bot reads every message, keeps the last `BOT_CONTEXT_MESSAGES`
+  (default 20) as context, and answers when a message is about the trip or asks it something;
+  greetings and side chatter get no reply.
+- `/plan <question>` — ask it directly.
+- `/status` — whether it can see the whole conversation in this group.
 - `/ideas` — the group's saved shortlist (the bot saves/updates ideas as the chat evolves).
 - `/prefs [text]` — show or replace the group profile (home airport, budget, dates, constraints).
 - `/forget` — clear conversation history for this chat; keeps ideas and profile.

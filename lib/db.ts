@@ -11,6 +11,15 @@ if (!g.__holidayDb) {
 }
 const db = g.__holidayDb;
 
+// Idempotent column additions for databases created before the column existed.
+function addColumn(sql: string): void {
+  try {
+    db.exec(sql);
+  } catch (err) {
+    if (!/duplicate column/i.test(String(err))) throw err;
+  }
+}
+
 db.exec(`
   create table if not exists chats (
     chat_id integer primary key,
@@ -38,6 +47,8 @@ db.exec(`
   );
   create index if not exists ideas_chat on ideas(chat_id, status);
 `);
+addColumn(`alter table messages add column tg_message_id integer`);
+db.exec(`create unique index if not exists messages_tg on messages(chat_id, tg_message_id)`);
 
 export type Idea = {
   id: number;
@@ -57,7 +68,12 @@ export type Chat = {
   idea_count: number;
 };
 
-export type StoredMessage = { role: "user" | "assistant"; author: string | null; content: string };
+export type StoredMessage = {
+  role: "user" | "assistant";
+  author: string | null;
+  content: string;
+  tg_message_id?: number | null;
+};
 
 export function ensureChat(chatId: number, title: string | undefined): void {
   db.prepare(
@@ -106,13 +122,11 @@ export function setPreferences(chatId: number, preferences: string): void {
   ).run(preferences, chatId);
 }
 
+/** Store a message; Telegram redeliveries of the same message id are ignored. */
 export function appendMessage(chatId: number, msg: StoredMessage): void {
-  db.prepare(`insert into messages (chat_id, role, author, content) values (?, ?, ?, ?)`).run(
-    chatId,
-    msg.role,
-    msg.author,
-    msg.content,
-  );
+  db.prepare(
+    `insert or ignore into messages (chat_id, role, author, content, tg_message_id) values (?, ?, ?, ?, ?)`,
+  ).run(chatId, msg.role, msg.author, msg.content, msg.tg_message_id ?? null);
 }
 
 export function recentMessages(chatId: number, limit: number): StoredMessage[] {

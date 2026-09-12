@@ -35,6 +35,6 @@ export const config = {
     .map((s) => s.trim())
     .filter(Boolean)
     .map(Number),
-  /** How many past turns (user+assistant) to replay to Claude per request. */
-  historyTurns: 30,
+  /** How many recent chat messages (everyone's, plus the bot's replies) to give the model as context. */
+  contextMessages: Number(process.env.BOT_CONTEXT_MESSAGES ?? 20),
 };

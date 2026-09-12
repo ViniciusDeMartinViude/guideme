@@ -3,21 +3,25 @@ import { Bot, Context, GrammyError } from "grammy";
 import { config } from "./config";
 import * as db from "./db";
 import { ask, formatIdeas } from "./agent";
+import { isSilent } from "./prompt";
 import { QuotaExhaustedError } from "./providers/gemini";
 import { markdownToTelegramHtml, splitMessage } from "./telegramFormat";
 
 export const bot = new Bot(config.telegramToken);
 
-const HELP = `I'm the group's holiday planner. Mention me (@{me}) or reply to one of my messages with what you're thinking, e.g.
-"@{me} where could 4 of us go for a week in November under €800 each?"
+const HELP = `I'm the group's holiday planner. Just talk — I follow the conversation and chime in when it's about the trip, e.g.
+"where could 4 of us go for a week in November under €800 each?"
 
 Commands:
-/plan <question> – ask without mentioning me
+/plan <question> – ask me directly
 /ideas – the group's saved shortlist
 /prefs – show the group profile (home airport, budget, dates…)
 /prefs <text> – replace the group profile
 /forget – wipe my memory of this chat's conversation (keeps ideas + profile)
-/help – this message`;
+/status – can I see the whole conversation in this group?
+/help – this message
+
+I use the last {n} messages in the chat as context, so you can discuss among yourselves and then ask me.`;
 
 function senderName(ctx: Context): string {
   const u = ctx.from;
@@ -52,6 +56,18 @@ async function sendLong(ctx: Context, text: string): Promise<void> {
 // One in-flight request per chat so history stays ordered.
 const queues = new Map<number, Promise<void>>();
 
+/** Remember every text message so the group's discussion is context for later questions. */
+function logMessage(ctx: Context, text: string): void {
+  const chat = ctx.chat!;
+  db.ensureChat(chat.id, chat.type === "private" ? senderName(ctx) : chat.title);
+  db.appendMessage(chat.id, {
+    role: "user",
+    author: senderName(ctx),
+    content: text,
+    tg_message_id: ctx.message?.message_id ?? null,
+  });
+}
+
 async function handleQuestion(ctx: Context, question: string): Promise<void> {
   const chatId = ctx.chat!.id;
   db.ensureChat(chatId, ctx.chat!.type === "private" ? senderName(ctx) : ctx.chat!.title);
@@ -62,7 +78,7 @@ async function handleQuestion(ctx: Context, question: string): Promise<void> {
     void ctx.replyWithChatAction("typing").catch(() => {});
     try {
       const answer = await ask(chatId, author, question);
-      await sendLong(ctx, answer);
+      if (!isSilent(answer)) await sendLong(ctx, answer);
     } catch (err) {
       console.error("ask failed", err);
       if (err instanceof QuotaExhaustedError) {
@@ -85,24 +101,9 @@ async function handleQuestion(ctx: Context, question: string): Promise<void> {
   await next;
 }
 
-/** Text with the @bot mention removed, or undefined if the bot was not addressed. */
-function addressedText(ctx: Context): string | undefined {
-  const msg = ctx.message;
-  if (!msg?.text) return undefined;
-  if (ctx.chat?.type === "private") return msg.text;
-
-  const me = ctx.me.username;
-  const mentioned = (msg.entities ?? []).some(
-    (e) =>
-      (e.type === "mention" &&
-        msg.text!.slice(e.offset, e.offset + e.length).toLowerCase() === `@${me.toLowerCase()}`) ||
-      (e.type === "text_mention" && e.user.id === ctx.me.id),
-  );
-  const replyToBot = msg.reply_to_message?.from?.id === ctx.me.id;
-  if (!mentioned && !replyToBot) return undefined;
-
-  const cleaned = msg.text.replace(new RegExp(`@${me}\\b`, "gi"), "").trim();
-  return cleaned || undefined;
+/** Message text with any @bot mention stripped. */
+function stripMention(ctx: Context, text: string): string {
+  return text.replace(new RegExp(`@${ctx.me.username}\\b`, "gi"), "").trim();
 }
 
 bot.use(async (ctx, next) => {
@@ -114,12 +115,27 @@ bot.use(async (ctx, next) => {
 });
 
 bot.command(["start", "help"], (ctx) =>
-  ctx.reply(HELP.replaceAll("{me}", ctx.me.username)),
+  ctx.reply(HELP.replaceAll("{me}", ctx.me.username).replace("{n}", String(config.contextMessages))),
 );
+
+// Telegram's privacy mode (default on) hides non-command, non-mention messages from bots
+// unless the bot is a group admin. Report which situation we are in.
+bot.command("status", async (ctx) => {
+  if (ctx.chat.type === "private") return ctx.reply("Private chat: I see everything you send me.");
+  const member = await ctx.getChatMember(ctx.me.id);
+  const seesAll = ctx.me.can_read_all_group_messages || member.status === "administrator";
+  const stored = db.recentMessages(ctx.chat.id, config.contextMessages).length;
+  return ctx.reply(
+    seesAll
+      ? `✅ I can read all messages here (${ctx.me.can_read_all_group_messages ? "privacy mode off" : "I'm an admin"}). ${stored} recent messages in my context.`
+      : `⚠️ I only receive commands, replies to me and mentions in this group — I can't follow the conversation.\nFix: make me a group admin, or in @BotFather run /setprivacy → @${ctx.me.username} → Disable, then remove and re-add me.`,
+  );
+});
 
 bot.command("plan", async (ctx) => {
   const q = ctx.match.trim();
   if (!q) return ctx.reply("Usage: /plan <what you want advice on>");
+  logMessage(ctx, q);
   await handleQuestion(ctx, q);
 });
 
@@ -143,9 +159,13 @@ bot.command("forget", (ctx) => {
   return ctx.reply("Conversation history cleared. Ideas and profile are kept.");
 });
 
+// Every text message is stored and goes to the model; it answers with SILENT when the
+// message isn't for it (see prompt), and nothing is posted in that case.
 bot.on("message:text", async (ctx) => {
-  const text = addressedText(ctx);
+  if (ctx.message.text.startsWith("/")) return; // other commands are handled above
+  const text = stripMention(ctx, ctx.message.text);
   if (!text) return;
+  logMessage(ctx, text);
   await handleQuestion(ctx, text);
 });
 
