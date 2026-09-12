@@ -26,7 +26,7 @@ Style for Telegram:
 - If a key fact is missing (dates, budget, home city) and it changes the answer, ask one short
   question instead of guessing — but still give a preliminary answer if you can.
 - Several people are talking; messages are prefixed with the sender's name. Address people by name
-  when it helps.`;
+  when it helps, but never start your own reply with a "Name:" prefix.`;
 
 /** Volatile per-request context: date, group profile, shortlist. */
 export function buildContext(chatId: number): string {

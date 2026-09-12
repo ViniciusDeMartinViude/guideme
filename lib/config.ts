@@ -12,7 +12,7 @@ const provider = (process.env.BOT_PROVIDER?.trim() || "gemini") as "gemini" | "o
 const defaultModel = {
   gemini: "gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3-flash-preview",
   openrouter: "anthropic/claude-opus-5",
-  openai: "gpt-5-mini",
+  openai: "gpt-5.5",
 }[provider];
 
 export const config = {

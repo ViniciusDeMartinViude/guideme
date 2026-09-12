@@ -12,7 +12,7 @@ search via Exa, weather via Open-Meteo (free), SQLite memory.
    - `TELEGRAM_BOT_TOKEN` — from @BotFather (`/newbot`).
    - `GEMINI_API_KEY` — https://aistudio.google.com (default provider). Free tier is **20 requests
      per day per model**; a question uses 2–5 requests, so enable billing for real use.
-   - `OPENAI_API_KEY` — if `BOT_PROVIDER=openai` (default model `gpt-5-mini`).
+   - `OPENAI_API_KEY` — if `BOT_PROVIDER=openai` (default model `gpt-5.5`; `gpt-5.4-mini` is the cheap option).
    - `OPENROUTER_API_KEY` — if `BOT_PROVIDER=openrouter`; needs credits.
    - `EXA_API_KEY` — https://dashboard.exa.ai
    - `ALLOWED_CHAT_IDS` (optional) — comma-separated chat ids; empty = any chat the bot is in.
