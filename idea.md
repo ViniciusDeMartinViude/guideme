@@ -25,23 +25,29 @@ and, whenever a message is about the trip (or asks it something), it:
 Greetings and side chatter between people get no reply (the model answers `[silent]` and the bot
 posts nothing). For this to work the bot must be a group admin or have Telegram privacy mode off.
 
-## How a question flows
+## Status
+
+Working since 2026-09-12 in the test group, running on the WSL machine with `npm run poll`
+(long polling — the bot calls Telegram, nothing is exposed publicly) and OpenAI `gpt-5.5`.
+The Next.js webhook route exists for the day it moves to a server.
+
+## How a message flows
 
 ```
 Telegram group
-  │  "@vamatripbot week in November, warm, ~€800 pp?"
+  │  "Let's go karting" … "Or Yas parks" … "help us with the holiday plans"
   ▼
-Next.js route  POST /api/telegram  (or `npm run poll` without a public URL)
-  │  checks the webhook secret, replies 200 at once, continues in after()
+`npm run poll` (long polling)          — or POST /api/telegram when hosted (webhook)
+  │  the bot must be a group admin (or privacy mode off) to receive every message
   ▼
 grammY handler (lib/bot.ts)
-  │  stores every text message; queues per chat, shows "typing…"
+  │  stores every text message (deduped by Telegram id); queues per chat; shows "typing…"
   ▼
 Agent turn (lib/agent.ts)
   │  system prompt + today's date + group profile + saved ideas
-  │  + last 30 stored turns + the new message ("Mik: …")
+  │  + the last 20 chat messages from everyone (BOT_CONTEXT_MESSAGES) + the new one ("Ana: …")
   ▼
-Model (Gemini Flash by default; Claude Opus 5 via OpenRouter with BOT_PROVIDER=openrouter)
+Model (OpenAI gpt-5.5 by default; BOT_PROVIDER=gemini or openrouter swaps it)
   │  loops: model → function call → run tool → result → model …
   │
   ├─ web_search      → Exa /search (titles, URLs, dates, excerpts)
@@ -50,14 +56,15 @@ Model (Gemini Flash by default; Claude Opus 5 via OpenRouter with BOT_PROVIDER=o
   ├─ save_idea / update_idea / list_ideas → SQLite `ideas`
   └─ update_preferences                   → SQLite `chats.preferences`
   │
-  ▼  final text
+  ▼  final text — or "[silent]" for greetings / side chatter, in which case nothing is posted
 Markdown → Telegram HTML, split at 4 000 chars, sent as reply
   │
   ▼
-SQLite `messages`: user turn + assistant answer stored for next time
+SQLite `messages`: the answer is stored next to the chat log for the next turn
 ```
 
-Each answer typically costs one to four model calls (one per round of tool use).
+Each answer typically costs one to four model calls (one per round of tool use); every
+trip-related message triggers a turn, so a chatty group means more calls.
 
 ## Components
 
@@ -66,24 +73,26 @@ Each answer typically costs one to four model calls (one per round of tool use).
 | App | Next.js 16 (App Router) | Webhook as a route handler + a dashboard in one codebase |
 | Runtime | Node 24 + TypeScript | Built-in `node:sqlite` avoids native modules |
 | Telegram | grammY | Small, typed, supports polling and webhooks with the same bot object |
-| Model | Gemini 3.x Flash (default) — or Claude Opus 5 via OpenRouter | Same tools either way; provider is one env var. Gemini free tier is 20 req/day/model, so billing is needed for daily use |
+| Model | OpenAI `gpt-5.5` (default). Alternatives: Gemini 3.x Flash, Claude Opus 5 via OpenRouter | Same tools either way; `BOT_PROVIDER` picks one. OpenAI was the key with working billing; Gemini free tier is 20 req/day/model (the bot rotates through several Flash models); OpenRouter needs credits. `gpt-5.4-mini` if cost matters |
 | Search | Exa | Semantic search with page excerpts — good for "price of X in month Y" queries |
 | Weather | Open-Meteo | Free, no key; has both forecast and historical archive |
 | Memory | SQLite (`data/bot.sqlite`) | One file, survives restarts, nothing to host |
-| Exposure | Webhook behind ngrok (or a host); `npm run poll` as the no-URL fallback | Webhook fits Next.js; polling needs nothing public |
+| Exposure | `npm run poll` (long polling) on the WSL machine; webhook route for a future server | Polling needs no public URL or ngrok; the webhook is there for hosting |
 | Dashboard | `/` and `/chats/[id]`, basic-auth | See what the bot remembers without opening Telegram |
 
 ## Running it
 
 ```
-cp .env.example .env     # fill TELEGRAM_BOT_TOKEN, OPENROUTER_API_KEY, EXA_API_KEY
+cp .env.example .env     # fill TELEGRAM_BOT_TOKEN, OPENAI_API_KEY, EXA_API_KEY
 npm install
-npm run dev              # Next.js on :3000 (dashboard + webhook route)
-ngrok http 3000          # public URL → WEBHOOK_URL in .env
-npm run webhook:set      # tell Telegram where to POST
+npm run poll             # the bot (long polling)
+npm run dev              # optional dashboard at http://localhost:3000
 ```
 
-No public URL handy? `npm run poll` runs the same bot with long polling instead.
+In Telegram: add the bot to the group and make it an **admin** (or `/setprivacy` → Disable in
+@BotFather, then remove and re-add it); `/status` in the group confirms it sees everything.
+
+On a server later: `npm run build && npm start`, set `WEBHOOK_URL`, `npm run webhook:set`.
 
 ## Commands
 
@@ -103,8 +112,8 @@ No public URL handy? `npm run poll` runs the same bot with long polling instead.
   group wants to book rather than browse.
 - **Proactive mode** — a scheduled run that watches a shortlisted idea and posts when fares drop
   or a deadline (visa, school holidays) approaches.
-- **Read the whole chat** — turn Telegram privacy mode off so the bot follows the conversation
-  and chimes in when relevant, not only when mentioned (costs more, needs tuning to avoid noise).
+- **Tune when it speaks** — it now follows everything and stays quiet on chit-chat; if it turns
+  out too talkative (or too quiet), the rule lives in one paragraph of `lib/prompt.ts`.
 - **Polls** — let the bot open a Telegram poll when the group is choosing between shortlisted ideas.
 - **Always-on hosting** — move from the WSL machine to a small VPS/Fly.io box; the code already
   runs in either polling or webhook mode.
