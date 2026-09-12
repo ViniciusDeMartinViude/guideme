@@ -17,23 +17,22 @@ search via Exa, weather via Open-Meteo (free), SQLite memory.
    - `ALLOWED_CHAT_IDS` (optional) — comma-separated chat ids; empty = any chat the bot is in.
 3. Add the bot to the group. Default privacy mode is fine: it only sees messages that mention it,
    reply to it, or are commands.
-4. Run it in one of two ways:
+4. Run it:
 
-   **Webhook (Next.js route, needs a public URL)**
+   **On your own machine — long polling (default, no public URL needed)**
    ```
-   npm run dev                       # Next on :3000 — dashboard at http://localhost:3000
-   ngrok http 3000                   # in another terminal; copy the https URL
-   WEBHOOK_URL=https://xxxx.ngrok-free.app   # into .env
+   npm run poll        # the bot
+   npm run dev         # optional: dashboard at http://localhost:3000
+   ```
+
+   **On a server — webhook (Next.js route)**
+   ```
+   npm run build && npm start        # Next on :3000 behind your https domain
+   WEBHOOK_URL=https://your.domain   # into .env
    npm run webhook:set               # registers <WEBHOOK_URL>/api/telegram with Telegram
    ```
-   `npm run webhook:info` shows what Telegram currently has. `GET /api/telegram` does the same.
-
-   **Long polling (no public URL)**
-   ```
-   npm run poll
-   ```
-   Polling and a registered webhook are mutually exclusive on Telegram's side; `npm run poll`
-   deletes the webhook when it starts.
+   `npm run webhook:info` shows what Telegram currently has. Polling and a registered webhook are
+   mutually exclusive on Telegram's side; `npm run poll` deletes the webhook when it starts.
 
 5. Dashboard: `http://localhost:3000` (basic auth with `DASHBOARD_PASSWORD` if set).
 
