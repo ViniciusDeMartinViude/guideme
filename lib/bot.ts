@@ -18,6 +18,7 @@ Commands:
 /prefs – show the group profile (home airport, budget, dates…)
 /prefs <text> – replace the group profile
 /forget – wipe my memory of this chat's conversation (keeps ideas + profile)
+/share – create an unlisted web preview of this trip
 /status – can I see the whole conversation in this group?
 /help – this message
 
@@ -157,6 +158,12 @@ bot.command("prefs", (ctx) => {
 bot.command("forget", (ctx) => {
   db.clearMessages(ctx.chat.id);
   return ctx.reply("Conversation history cleared. Ideas and profile are kept.");
+});
+
+bot.command("share", (ctx) => {
+  db.ensureChat(ctx.chat.id, ctx.chat.title);
+  const token = db.getOrCreateShare(ctx.chat.id);
+  return ctx.reply(`Here’s the unlisted trip preview:\n${config.publicAppUrl}/trip/${token}`);
 });
 
 // Every text message is stored and goes to the model; it answers with SILENT when the

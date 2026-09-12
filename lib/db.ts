@@ -11,6 +11,10 @@ if (!g.__holidayDb) {
 }
 const db = g.__holidayDb;
 
+// Next may evaluate dynamic routes in parallel while building. Wait briefly for
+// another worker's schema migration instead of failing with "database is locked".
+db.exec("pragma busy_timeout = 5000;");
+
 // Idempotent column additions for databases created before the column existed.
 function addColumn(sql: string): void {
   try {
@@ -46,6 +50,12 @@ db.exec(`
     updated_at text not null default (datetime('now'))
   );
   create index if not exists ideas_chat on ideas(chat_id, status);
+  create table if not exists trip_shares (
+    chat_id integer primary key,
+    token text not null unique,
+    created_at text not null default (datetime('now')),
+    updated_at text not null default (datetime('now'))
+  );
 `);
 addColumn(`alter table messages add column tg_message_id integer`);
 db.exec(`create unique index if not exists messages_tg on messages(chat_id, tg_message_id)`);
@@ -67,6 +77,8 @@ export type Chat = {
   message_count: number;
   idea_count: number;
 };
+
+export type SharedTrip = { chat: Chat; ideas: Idea[]; token: string; updated_at: string };
 
 export type StoredMessage = {
   role: "user" | "assistant";
@@ -169,4 +181,30 @@ export function updateIdea(
     `update ideas set notes = ?, status = ?, updated_at = datetime('now') where id = ?`,
   ).run(patch.notes ?? current.notes, patch.status ?? current.status, id);
   return db.prepare(`select * from ideas where id = ?`).get(id) as Idea;
+}
+
+/** An unguessable, stable public token for the chat's current trip plan. */
+export function getOrCreateShare(chatId: number): string {
+  const existing = db.prepare(`select token from trip_shares where chat_id = ?`).get(chatId) as
+    | { token: string }
+    | undefined;
+  if (existing) {
+    db.prepare(`update trip_shares set updated_at = datetime('now') where chat_id = ?`).run(chatId);
+    return existing.token;
+  }
+
+  const token = crypto.randomUUID().replaceAll("-", "");
+  db.prepare(`insert into trip_shares (chat_id, token) values (?, ?)`).run(chatId, token);
+  return token;
+}
+
+/** Data deliberately safe for an unlisted share page: no raw group messages. */
+export function getSharedTrip(token: string): SharedTrip | undefined {
+  const share = db.prepare(`select chat_id, token, updated_at from trip_shares where token = ?`).get(token) as
+    | { chat_id: number; token: string; updated_at: string }
+    | undefined;
+  if (!share) return undefined;
+  const chat = getChat(share.chat_id);
+  if (!chat) return undefined;
+  return { chat, ideas: listIdeas(share.chat_id), token: share.token, updated_at: share.updated_at };
 }

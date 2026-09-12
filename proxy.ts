@@ -18,4 +18,6 @@ export function proxy(req: NextRequest) {
   });
 }
 
-export const config = { matcher: ["/((?!api/telegram|_next/static|_next/image|favicon.ico).*)"] };
+// The marketing site and unlisted trip links are public. The operational views
+// are the only routes that need dashboard credentials.
+export const config = { matcher: ["/dashboard/:path*", "/chats/:path*"] };

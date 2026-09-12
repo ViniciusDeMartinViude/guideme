@@ -1,0 +1,25 @@
+services:
+  vamabot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - vamabot-data:/app/data
+    networks:
+      - traefik_default
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.vamabot.rule=Host(`vama.f43.run`)"
+      - "traefik.http.routers.vamabot.entrypoints=websecure"
+      - "traefik.http.routers.vamabot.tls.certresolver=f43resolver"
+      - "traefik.http.services.vamabot.loadbalancer.server.port=3000"
+
+networks:
+  traefik_default:
+    external: true
+
+volumes:
+  vamabot-data:

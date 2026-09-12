@@ -37,4 +37,5 @@ export const config = {
     .map(Number),
   /** How many recent chat messages (everyone's, plus the bot's replies) to give the model as context. */
   contextMessages: Number(process.env.BOT_CONTEXT_MESSAGES ?? 20),
+  publicAppUrl: (process.env.PUBLIC_APP_URL?.trim() || "https://vama.f43.run").replace(/\/$/, ""),
 };

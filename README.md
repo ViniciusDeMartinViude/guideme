@@ -47,6 +47,7 @@ search via Exa, weather via Open-Meteo (free), SQLite memory.
 - `/plan <question>` — ask it directly.
 - `/status` — whether it can see the whole conversation in this group.
 - `/ideas` — the group's saved shortlist (the bot saves/updates ideas as the chat evolves).
+- `/share` — create an unlisted web preview of the group’s trip brief and shortlist.
 - `/prefs [text]` — show or replace the group profile (home airport, budget, dates, constraints).
 - `/forget` — clear conversation history for this chat; keeps ideas and profile.
 

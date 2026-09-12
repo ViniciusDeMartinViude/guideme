@@ -13,7 +13,7 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
   const messages = allMessages(chatId);
 
   return (
-    <>
+    <main className="container dashboard-page">
       <h1>{chat.title ?? `Chat ${chat.chat_id}`}</h1>
       <p className="muted">chat id {chat.chat_id}</p>
 
@@ -48,6 +48,6 @@ export default async function ChatPage({ params }: { params: Promise<{ id: strin
           <pre>{m.content}</pre>
         </div>
       ))}
-    </>
+    </main>
   );
 }
