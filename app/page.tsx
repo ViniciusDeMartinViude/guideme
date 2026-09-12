@@ -17,7 +17,7 @@ export default function Home() {
     <main className="landing">
       <nav className="landing-nav" aria-label="Main navigation">
         <Link className="wordmark" href="/">
-          <span className="wordmark-mark">v</span> vama<span>bot</span>
+          <img className="wordmark-avatar" src="/vamatripbot-avatar.png" alt="VamaTripBot" /> vama<span>bot</span>
         </Link>
         <div className="nav-links">
           <a href="#how-it-works">How it works</a>
@@ -40,7 +40,9 @@ export default function Home() {
             <a className="button primary" href="https://t.me/vamatripbot" target="_blank" rel="noreferrer">
               Plan a trip in Telegram <span aria-hidden="true">→</span>
             </a>
-            <a className="text-link" href="#how-it-works">See how it works <span aria-hidden="true">↓</span></a>
+            <a className="button demo" href="https://youtu.be/lDuLl59M11I" target="_blank" rel="noreferrer">
+              Watch the demo <span aria-hidden="true">▶</span>
+            </a>
           </div>
           <p className="quiet-note">Built for the chat where every trip actually starts.</p>
         </div>
@@ -50,7 +52,7 @@ export default function Home() {
           <div className="chat-body">
             <div className="bubble bubble-user">Where can 4 of us go for a long weekend in October? Warm, not too expensive.</div>
             <div className="chat-person">MAYA · 10:42</div>
-            <div className="bubble bubble-bot"><span className="bot-icon">v</span><p><strong>I’d look at Malta, Seville, and Crete.</strong><br />Malta is the easiest warm bet; Seville is best for food and city energy. Want me to compare flights from your airport?</p></div>
+            <div className="bubble bubble-bot"><img className="bot-icon" src="/vamatripbot-avatar.png" alt="" /><p><strong>I’d look at Malta, Seville, and Crete.</strong><br />Malta is the easiest warm bet; Seville is best for food and city energy. Want me to compare flights from your airport?</p></div>
             <div className="chat-person bot-label">VAMABOT · 10:42</div>
             <div className="bubble bubble-user short">Yes please — under €500 each?</div>
             <div className="typing"><i /><i /><i /></div>
@@ -71,7 +73,7 @@ export default function Home() {
       </section>
 
       <section className="closing"><p className="eyebrow"><span /> YOUR NEXT TRIP STARTS HERE</p><h2>Drop it in the group.</h2><p>VamaBot will take it from there.</p><a className="button primary" href="https://t.me/vamatripbot" target="_blank" rel="noreferrer">Meet VamaBot on Telegram <span aria-hidden="true">→</span></a></section>
-      <footer><Link className="wordmark" href="/"><span className="wordmark-mark">v</span> vama<span>bot</span></Link><p>Made for people who would rather be travelling.</p><Link href="/dashboard">Dashboard</Link></footer>
+      <footer><Link className="wordmark" href="/"><img className="wordmark-avatar" src="/vamatripbot-avatar.png" alt="VamaTripBot" /> vama<span>bot</span></Link><p>Made for people who would rather be travelling.</p><div className="footer-links"><a href="https://lnkd.in/p/d-qatkgG" target="_blank" rel="noreferrer">LinkedIn post ↗</a><Link href="/dashboard">Dashboard</Link></div></footer>
     </main>
   );
 }
